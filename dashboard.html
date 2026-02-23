@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — EduFace</title>
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .dash-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .dash-header .welcome h1 {
+            font-size: 1.8rem;
+        }
+
+        .dash-header .welcome p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card .stat-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+
+        .chart-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .chart-card canvas {
+            max-height: 300px;
+        }
+
+        .recent-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .recent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+
+        .recent-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .recent-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+
+        .recent-item .ri-left {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .recent-item .ri-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            display: grid;
+            place-items: center;
+            font-size: 1rem;
+        }
+
+        .recent-item .ri-text h4 {
+            font-size: 0.88rem;
+        }
+
+        .recent-item .ri-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .recent-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav"></div>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <div class="page-content">
+        <div class="container">
+            <!-- Header -->
+            <div class="dash-header">
+                <div class="welcome">
+                    <h1 id="welcomeText">Welcome back! 👋</h1>
+                    <p>Here's your attendance overview</p>
+                </div>
+                <div class="quick-actions">
+                    <a href="hall-ticket.html" class="btn btn-secondary">🎫 Verify Hall Ticket</a>
+                    <a href="mood-check.html" class="btn btn-outline">🧠 Mood Check</a>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>📊 Weekly Attendance (Last 7 Days)</h3>
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>📈 Subject-wise Attendance</h3>
+                    <canvas id="subjectChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly trend -->
+            <div class="chart-card mb-3">
+                <h3>📅 Monthly Attendance Trend</h3>
+                <canvas id="monthlyChart"></canvas>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="recent-section">
+                <div class="recent-card">
+                    <h3>🕐 Recent Attendance</h3>
+                    <div id="recentAttendance"></div>
+                </div>
+                <div class="recent-card">
+                    <h3>📄 Your Papers</h3>
+                    <div id="recentPapers"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        if (!requireAuth()) throw 'Not logged in';
+        document.getElementById('nav').innerHTML = renderNavbar('dashboard');
+        document.getElementById('footer').innerHTML = renderFooter();
+
+        const user = getCurrentUser();
+        document.getElementById('welcomeText').textContent = `Welcome, ${user.name}! 👋`;
+
+        const attendance = DB.get('attendance').filter(a => a.studentId === user.id);
+        const subjects = ['Machine Learning', 'Cloud Computing', 'Cyber Security', 'Software Eng.'];
+
+        // ===== Stats =====
+        const totalClasses = attendance.length;
+        const presentCount = attendance.filter(a => a.status === 'present' || a.status === 'late').length;
+        const overallPct = totalClasses > 0 ? ((presentCount / totalClasses) * 100).toFixed(1) : 0;
+        const lateCount = attendance.filter(a => a.status === 'late').length;
+
+        document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value">${overallPct}%</div>
+        <div class="stat-label">Overall Attendance</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">${presentCount}</div>
+        <div class="stat-label">Classes Attended</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-value">${subjects.length}</div>
+        <div class="stat-label">Subjects</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-value">${lateCount}</div>
+        <div class="stat-label">Times Late</div>
+      </div>
+    `;
+
+        // ===== Weekly Chart =====
+        const last7Days = [];
+        const last7Labels = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            last7Labels.push(d.toLocaleDateString('en', { weekday: 'short' }));
+            const dayAtt = attendance.filter(a => a.date === dateStr);
+            const dayTotal = subjects.length;
+            last7Days.push(dayTotal > 0 ? ((dayAtt.length / dayTotal) * 100).toFixed(0) : 0);
+        }
+
+        new Chart(document.getElementById('weeklyChart'), {
+            type: 'bar',
+            data: {
+                labels: last7Labels,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: last7Days,
+                    backgroundColor: ['rgba(139,92,246,0.6)', 'rgba(6,182,212,0.6)', 'rgba(16,185,129,0.6)', 'rgba(245,158,11,0.6)', 'rgba(59,130,246,0.6)', 'rgba(244,63,94,0.6)', 'rgba(139,92,246,0.6)'],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#64748b' }, grid: { display: false } }
+                }
+            }
+        });
+
+        // ===== Subject Pie =====
+        const subjectData = subjects.map(sub => {
+            const subAtt = attendance.filter(a => a.subject === sub);
+            return subAtt.length;
+        });
+
+        new Chart(document.getElementById('subjectChart'), {
+            type: 'doughnut',
+            data: {
+                labels: subjects,
+                datasets: [{
+                    data: subjectData,
+                    backgroundColor: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 15, font: { size: 11 } } }
+                }
+            }
+        });
+
+        // ===== Monthly Line Chart =====
+        const monthlyLabels = [];
+        const monthlyData = [];
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            monthlyLabels.push(d.getDate().toString());
+            const dayAtt = attendance.filter(a => a.date === dateStr);
+            monthlyData.push(dayAtt.length);
+        }
+
+        new Chart(document.getElementById('monthlyChart'), {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: 'Classes Attended',
+                    data: monthlyData,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139,92,246,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#8b5cf6',
+                    pointRadius: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#64748b', maxTicksLimit: 10 }, grid: { display: false } }
+                }
+            }
+        });
+
+        // ===== Recent Attendance =====
+        const recent = attendance.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+        document.getElementById('recentAttendance').innerHTML = recent.length > 0
+            ? recent.map(a => `
+        <div class="recent-item">
+          <div class="ri-left">
+            <div class="ri-icon" style="background:rgba(16,185,129,0.12)">✅</div>
+            <div class="ri-text">
+              <h4>${a.subject}</h4>
+              <p>${a.date} • ${a.status}</p>
+            </div>
+          </div>
+          <span class="badge badge-green">${a.confidence}%</span>
+        </div>
+      `).join('')
+            : '<p style="color:var(--text-muted)">No attendance records yet</p>';
+
+        // ===== Recent Papers =====
+        const papers = DB.get('papers').filter(p => p.studentId === user.id);
+        document.getElementById('recentPapers').innerHTML = papers.length > 0
+            ? papers.map(p => `
+        <div class="recent-item">
+          <div class="ri-left">
+            <div class="ri-icon" style="background:rgba(139,92,246,0.12)">📄</div>
+            <div class="ri-text">
+              <h4>${p.title}</h4>
+              <p>${p.date} • ${p.tags.join(', ')}</p>
+            </div>
+          </div>
+          <span class="badge badge-purple">${p.published ? 'Published' : 'Draft'}</span>
+        </div>
+      `).join('')
+            : '<p style="color:var(--text-muted)">No papers published yet. <a href="papers.html" style="color:var(--accent-purple-light)">Publish one →</a></p>';
+    </script>
+</body>
+
+</html>

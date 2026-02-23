@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall Ticket Verification — EduFace</title>
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        .ht-page {
+            padding: 6rem 0 3rem;
+        }
+
+        .ht-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .ht-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+        }
+
+        .ht-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Ticket display */
+        .ticket {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.05));
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .ticket.verified {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .ticket .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .ticket .ticket-header h4 {
+            font-size: 1rem;
+        }
+
+        .ticket-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+
+        .ticket-info .ti {
+            font-size: 0.85rem;
+        }
+
+        .ticket-info .ti label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .verified-stamp {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 80px;
+            height: 80px;
+            border: 3px solid var(--accent-green);
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            color: var(--accent-green);
+            font-weight: 800;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            transform: rotate(-15deg);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .ticket.verified .verified-stamp {
+            opacity: 1;
+        }
+
+        /* Webcam for verification */
+        .verify-webcam {
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 2px solid var(--border-color);
+            background: #000;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .verify-webcam video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .verify-webcam .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--gradient-primary);
+            animation: scanLine 2s linear infinite;
+            opacity: 0;
+        }
+
+        .verify-webcam.scanning .scan-line {
+            opacity: 1;
+        }
+
+        @keyframes scanLine {
+            0% {
+                top: 0;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+
+        .verify-result {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            display: none;
+        }
+
+        .verify-result.show {
+            display: block;
+        }
+
+        .verify-result.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .verify-result h3 {
+            margin-bottom: 0.3rem;
+        }
+
+        .verify-result p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        @media (max-width: 768px) {
+            .ht-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav"></div>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <div class="page-content">
+        <div class="container ht-page">
+            <div class="section-header">
+                <h2>🎫 Hall Ticket Verification</h2>
+                <p>Verify your exam hall ticket using face recognition</p>
+            </div>
+
+            <div class="ht-grid">
+                <!-- Left: Tickets List -->
+                <div class="ht-card">
+                    <h3>Your Hall Tickets</h3>
+                    <div id="ticketsList"></div>
+                </div>
+
+                <!-- Right: Verification -->
+                <div class="ht-card">
+                    <h3>📸 Face Verification</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+                        Select a hall ticket and scan your face to verify identity
+                    </p>
+                    <div class="verify-webcam" id="verifyWebcam">
+                        <video id="htVideo" autoplay playsinline></video>
+                        <div class="scan-line"></div>
+                    </div>
+                    <div style="display:flex; gap:0.8rem;">
+                        <button class="btn btn-secondary" onclick="startVerifyCam()" id="startVerifyBtn">📷 Start
+                            Camera</button>
+                        <button class="btn btn-primary" onclick="verifyFace()" id="verifyBtn" style="display:none;">🔍
+                            Verify Now</button>
+                    </div>
+                    <div class="verify-result" id="verifyResult">
+                        <h3 style="color:var(--accent-green);">✅ Identity Verified!</h3>
+                        <p id="verifyMsg">Face matched successfully</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        if (!requireAuth()) throw 'Not logged in';
+        document.getElementById('nav').innerHTML = renderNavbar('hall-ticket');
+        document.getElementById('footer').innerHTML = renderFooter();
+
+        const user = getCurrentUser();
+        let htStream = null;
+        let selectedTicketId = null;
+
+        function renderTickets() {
+            const tickets = DB.get('hallTickets').filter(t => t.studentId === user.id);
+            const container = document.getElementById('ticketsList');
+
+            if (tickets.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted)">No hall tickets assigned yet. Demo tickets are pre-loaded for the first user.</p>';
+                return;
+            }
+
+            container.innerHTML = tickets.map(t => `
+        <div class="ticket ${t.verified ? 'verified' : ''}" id="ticket-${t.id}" onclick="selectTicket('${t.id}')">
+          <div class="ticket-header">
+            <h4>${t.examName}</h4>
+            ${t.verified
+                    ? '<span class="badge badge-green">✅ Verified</span>'
+                    : '<span class="badge badge-amber">⏳ Pending</span>'
+                }
+          </div>
+          <div class="ticket-info">
+            <div class="ti"><label>Student</label>${user.name}</div>
+            <div class="ti"><label>Roll No</label>${user.rollNo}</div>
+            <div class="ti"><label>Exam Date</label>${t.examDate}</div>
+            <div class="ti"><label>Seat No</label>${t.seatNo}</div>
+          </div>
+          ${t.verified ? `<div class="verified-stamp">VERIFIED</div>` : ''}
+        </div>
+      `).join('');
+        }
+
+        function selectTicket(id) {
+            selectedTicketId = id;
+            document.querySelectorAll('.ticket').forEach(t => t.style.outline = 'none');
+            document.getElementById(`ticket-${id}`).style.outline = '2px solid var(--accent-purple)';
+            showToast('Ticket selected. Now verify with your face.', 'info');
+        }
+
+        function startVerifyCam() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    htStream = stream;
+                    document.getElementById('htVideo').srcObject = stream;
+                    document.getElementById('startVerifyBtn').style.display = 'none';
+                    document.getElementById('verifyBtn').style.display = 'inline-flex';
+                    document.getElementById('verifyWebcam').classList.add('scanning');
+                })
+                .catch(() => showToast('Camera access denied', 'error'));
+        }
+
+        function verifyFace() {
+            if (!selectedTicketId) {
+                showToast('Please select a hall ticket first', 'error');
+                return;
+            }
+
+            // Simulate verification
+            document.getElementById('verifyBtn').disabled = true;
+            document.getElementById('verifyBtn').textContent = '🔄 Verifying...';
+
+            setTimeout(() => {
+                // Mark ticket as verified
+                const tickets = DB.get('hallTickets');
+                const idx = tickets.findIndex(t => t.id === selectedTicketId);
+                if (idx >= 0) {
+                    tickets[idx].verified = true;
+                    tickets[idx].verifiedAt = new Date().toISOString();
+                    DB.set('hallTickets', tickets);
+                }
+
+                // Show result
+                const result = document.getElementById('verifyResult');
+                result.classList.add('show', 'success');
+                document.getElementById('verifyMsg').textContent =
+                    `Face matched with ${user.name} (${user.rollNo}). Confidence: ${(92 + Math.random() * 7).toFixed(1)}%`;
+
+                showToast('Hall ticket verified successfully!', 'success');
+                document.getElementById('verifyWebcam').classList.remove('scanning');
+                renderTickets();
+
+                // Cleanup
+                if (htStream) { htStream.getTracks().forEach(t => t.stop()); }
+                document.getElementById('verifyBtn').style.display = 'none';
+            }, 2000);
+        }
+
+        renderTickets();
+    </script>
+</body>
+
+</html>

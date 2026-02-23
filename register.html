@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — EduFace</title>
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        .register-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem 2rem;
+        }
+
+        .register-card {
+            width: 100%;
+            max-width: 900px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Left panel — form */
+        .register-form-panel {
+            padding: 2.5rem;
+        }
+
+        .register-form-panel h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .register-form-panel .sub {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Right panel — face enrollment */
+        .face-panel {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.05));
+            border-left: 1px solid var(--border-color);
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .face-panel h2 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .face-panel .sub {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .face-capture-area {
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            border: 3px dashed var(--border-color);
+            overflow: hidden;
+            position: relative;
+            background: var(--bg-secondary);
+            display: grid;
+            place-items: center;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .face-capture-area.active {
+            border-style: solid;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+        }
+
+        .face-capture-area.captured {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .face-capture-area video,
+        .face-capture-area img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .face-capture-area .placeholder {
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .face-capture-area .placeholder span {
+            font-size: 3.5rem;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Face capture controls */
+        .face-controls {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Steps indicator */
+        .enrollment-steps {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .enrollment-steps .estep {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+        }
+
+        .enrollment-steps .estep.active {
+            color: var(--accent-purple-light);
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .enrollment-steps .estep.done {
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        /* Captured faces grid */
+        .captured-faces {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .captured-faces img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-green);
+            object-fit: cover;
+        }
+
+        .register-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+
+        .register-footer a {
+            color: var(--accent-purple-light);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .register-card {
+                grid-template-columns: 1fr;
+            }
+
+            .face-panel {
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav"></div>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <div class="register-page">
+        <div class="register-card">
+            <!-- Left: Form -->
+            <div class="register-form-panel">
+                <h1>Create Account</h1>
+                <p class="sub">Fill in your details to register</p>
+
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" class="form-input" id="regName" placeholder="John Doe" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Roll Number</label>
+                            <input type="text" class="form-input" id="regRoll" placeholder="CS2022001" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-input" id="regEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select class="form-input" id="regDept">
+                                <option>Computer Science</option>
+                                <option>Electronics</option>
+                                <option>Mechanical</option>
+                                <option>Civil</option>
+                                <option>Electrical</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Year</label>
+                            <select class="form-input" id="regYear">
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4" selected>4th Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" class="form-input" id="regPass" placeholder="Create a password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%" id="registerBtn" disabled>
+                        Complete Registration →
+                    </button>
+                </form>
+                <div class="register-footer">
+                    Already have an account? <a href="login.html">Login here</a>
+                </div>
+            </div>
+
+            <!-- Right: Face Enrollment -->
+            <div class="face-panel">
+                <h2>📸 Face Enrollment</h2>
+                <p class="sub">Capture your face for recognition. We need 3 angles for accuracy.</p>
+
+                <div class="enrollment-steps">
+                    <div class="estep active" id="step1">① Front</div>
+                    <div class="estep" id="step2">② Left</div>
+                    <div class="estep" id="step3">③ Right</div>
+                </div>
+
+                <div class="face-capture-area" id="captureArea">
+                    <div class="placeholder" id="capturePlaceholder">
+                        <span>👤</span>
+                        <p>Click "Start Camera" below</p>
+                    </div>
+                    <video id="regVideo" autoplay playsinline style="display:none;"></video>
+                    <canvas id="regCanvas" style="display:none;"></canvas>
+                </div>
+
+                <div class="face-controls">
+                    <button class="btn btn-secondary" onclick="startCamera()" id="startCamBtn">📷 Start Camera</button>
+                    <button class="btn btn-primary" onclick="captureFrame()" id="captureBtn" style="display:none;">📸
+                        Capture</button>
+                    <button class="btn btn-outline" onclick="retakeAll()" id="retakeBtn" style="display:none;">🔄 Retake
+                        All</button>
+                </div>
+
+                <div class="captured-faces" id="capturedFaces"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.getElementById('nav').innerHTML = renderNavbar('register');
+        document.getElementById('footer').innerHTML = renderFooter();
+
+        let regStream = null;
+        let capturedImages = [];
+        const angles = ['Front', 'Left', 'Right'];
+
+        function startCamera() {
+            const video = document.getElementById('regVideo');
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+                .then(stream => {
+                    regStream = stream;
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    document.getElementById('capturePlaceholder').style.display = 'none';
+                    document.getElementById('captureArea').classList.add('active');
+                    document.getElementById('startCamBtn').style.display = 'none';
+                    document.getElementById('captureBtn').style.display = 'inline-flex';
+                    showToast('Camera ready! Face forward and click Capture', 'info');
+                })
+                .catch(() => showToast('Cannot access camera. Please allow camera permission.', 'error'));
+        }
+
+        function captureFrame() {
+            const video = document.getElementById('regVideo');
+            const canvas = document.getElementById('regCanvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            capturedImages.push(dataUrl);
+
+            // Show captured thumbnail
+            const facesDiv = document.getElementById('capturedFaces');
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.style.transform = 'scaleX(-1)';
+            facesDiv.appendChild(img);
+
+            // Update steps
+            const stepNum = capturedImages.length;
+            document.getElementById(`step${stepNum}`).classList.remove('active');
+            document.getElementById(`step${stepNum}`).classList.add('done');
+
+            if (stepNum < 3) {
+                document.getElementById(`step${stepNum + 1}`).classList.add('active');
+                showToast(`✓ ${angles[stepNum - 1]} captured! Now turn slightly ${angles[stepNum].toLowerCase()}`, 'success');
+            } else {
+                // All 3 captured
+                showToast('✓ All angles captured! You can now register.', 'success');
+                document.getElementById('captureBtn').style.display = 'none';
+                document.getElementById('retakeBtn').style.display = 'inline-flex';
+                document.getElementById('captureArea').classList.remove('active');
+                document.getElementById('captureArea').classList.add('captured');
+                document.getElementById('registerBtn').disabled = false;
+                stopCamera();
+            }
+        }
+
+        function retakeAll() {
+            capturedImages = [];
+            document.getElementById('capturedFaces').innerHTML = '';
+            document.getElementById('captureArea').classList.remove('captured');
+            ['step1', 'step2', 'step3'].forEach((s, i) => {
+                document.getElementById(s).classList.remove('done', 'active');
+                if (i === 0) document.getElementById(s).classList.add('active');
+            });
+            document.getElementById('retakeBtn').style.display = 'none';
+            document.getElementById('registerBtn').disabled = true;
+            startCamera();
+        }
+
+        function stopCamera() {
+            if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            if (capturedImages.length < 3) {
+                showToast('Please capture all 3 face angles first', 'error');
+                return;
+            }
+
+            const newStudent = {
+                id: Date.now().toString(),
+                name: document.getElementById('regName').value,
+                email: document.getElementById('regEmail').value,
+                rollNo: document.getElementById('regRoll').value,
+                department: document.getElementById('regDept').value,
+                year: parseInt(document.getElementById('regYear').value),
+                faceData: capturedImages
+            };
+
+            const students = DB.get('students');
+            // Check duplicate
+            if (students.find(s => s.email === newStudent.email || s.rollNo === newStudent.rollNo)) {
+                showToast('A student with this email or roll number already exists', 'error');
+                return;
+            }
+            students.push(newStudent);
+            DB.set('students', students);
+            setCurrentUser(newStudent);
+
+            showToast(`Welcome, ${newStudent.name}! Registration successful!`, 'success');
+            setTimeout(() => window.location.href = 'dashboard.html', 1200);
+        }
+    </script>
+</body>
+
+</html>

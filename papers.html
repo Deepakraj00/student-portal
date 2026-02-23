@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Papers — EduFace</title>
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        .papers-page {
+            padding: 6rem 0 3rem;
+        }
+
+        .papers-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 1rem;
+            width: 320px;
+            max-width: 100%;
+        }
+
+        .search-box input {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            flex: 1;
+        }
+
+        .papers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .paper-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.8rem;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .paper-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .paper-card .paper-tags {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .paper-card h3 {
+            font-size: 1.05rem;
+            margin-bottom: 0.6rem;
+            line-height: 1.4;
+        }
+
+        .paper-card .abstract {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .paper-card .paper-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Publish Modal */
+        .publish-form textarea {
+            min-height: 100px;
+        }
+
+        .tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            min-height: 42px;
+            align-items: center;
+        }
+
+        .tags-input .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-purple-light);
+            padding: 0.2rem 0.6rem;
+            border-radius: 50px;
+            font-size: 0.78rem;
+        }
+
+        .tags-input .tag button {
+            background: none;
+            border: none;
+            color: var(--accent-purple-light);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .tags-input input {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            flex: 1;
+            min-width: 100px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav"></div>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <div class="page-content">
+        <div class="container papers-page">
+            <div class="section-header">
+                <h2>📄 Research Papers</h2>
+                <p>Browse and publish academic research papers</p>
+            </div>
+
+            <div class="papers-toolbar">
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" placeholder="Search papers..." id="searchInput" oninput="filterPapers()">
+                </div>
+                <button class="btn btn-primary" onclick="openPublishModal()">+ Publish Paper</button>
+            </div>
+
+            <div class="papers-grid" id="papersGrid"></div>
+        </div>
+    </div>
+
+    <!-- Publish Modal -->
+    <div class="modal-backdrop" id="publishModal">
+        <div class="modal" style="max-width:560px;">
+            <h2 style="font-size:1.3rem; margin-bottom:0.3rem;">📝 Publish a Paper</h2>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem;">Share your research with the
+                community</p>
+
+            <form onsubmit="publishPaper(event)" class="publish-form">
+                <div class="form-group">
+                    <label>Paper Title</label>
+                    <input type="text" class="form-input" id="paperTitle"
+                        placeholder="e.g. Face Recognition using LBPH Algorithm" required>
+                </div>
+                <div class="form-group">
+                    <label>Abstract</label>
+                    <textarea class="form-input" id="paperAbstract" placeholder="Brief description of your research..."
+                        required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tags</label>
+                    <div class="tags-input" id="tagsInput">
+                        <input type="text" placeholder="Type and press Enter..." id="tagInput"
+                            onkeydown="addTag(event)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Upload PDF (optional)</label>
+                    <input type="file" class="form-input" accept=".pdf" id="paperFile" style="padding: 0.6rem;">
+                </div>
+                <div style="display:flex; gap:0.8rem; margin-top:1rem;">
+                    <button type="submit" class="btn btn-primary" style="flex:1;">Publish →</button>
+                    <button type="button" class="btn btn-outline" onclick="closePublishModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        if (!requireAuth()) throw 'Not logged in';
+        document.getElementById('nav').innerHTML = renderNavbar('papers');
+        document.getElementById('footer').innerHTML = renderFooter();
+
+        const user = getCurrentUser();
+        let paperTags = [];
+
+        function renderPapers(filter = '') {
+            let papers = DB.get('papers');
+            if (filter) {
+                const query = filter.toLowerCase();
+                papers = papers.filter(p =>
+                    p.title.toLowerCase().includes(query) ||
+                    p.abstract.toLowerCase().includes(query) ||
+                    p.tags.some(t => t.toLowerCase().includes(query))
+                );
+            }
+
+            const students = DB.get('students');
+            const grid = document.getElementById('papersGrid');
+
+            if (papers.length === 0) {
+                grid.innerHTML = '<p style="color:var(--text-muted); text-align:center; grid-column:1/-1;">No papers found. Be the first to publish!</p>';
+                return;
+            }
+
+            grid.innerHTML = papers.map(p => {
+                const author = students.find(s => s.id === p.studentId);
+                return `
+          <div class="paper-card">
+            <div class="paper-tags">
+              ${p.tags.map(t => `<span class="badge badge-purple">${t}</span>`).join('')}
+            </div>
+            <h3>${p.title}</h3>
+            <p class="abstract">${p.abstract}</p>
+            <div class="paper-footer">
+              <span>By ${author ? author.name : 'Unknown'}</span>
+              <span>${p.date}</span>
+            </div>
+          </div>
+        `;
+            }).join('');
+        }
+
+        function filterPapers() {
+            renderPapers(document.getElementById('searchInput').value);
+        }
+
+        function openPublishModal() {
+            document.getElementById('publishModal').classList.add('active');
+        }
+
+        function closePublishModal() {
+            document.getElementById('publishModal').classList.remove('active');
+            paperTags = [];
+            renderTagsUI();
+        }
+
+        function addTag(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = e.target.value.trim();
+                if (val && !paperTags.includes(val) && paperTags.length < 5) {
+                    paperTags.push(val);
+                    e.target.value = '';
+                    renderTagsUI();
+                }
+            }
+        }
+
+        function removeTag(tag) {
+            paperTags = paperTags.filter(t => t !== tag);
+            renderTagsUI();
+        }
+
+        function renderTagsUI() {
+            const container = document.getElementById('tagsInput');
+            const input = document.getElementById('tagInput');
+            container.innerHTML = paperTags.map(t =>
+                `<span class="tag">${t} <button type="button" onclick="removeTag('${t}')">×</button></span>`
+            ).join('');
+            container.appendChild(input);
+        }
+
+        function publishPaper(e) {
+            e.preventDefault();
+            const paper = {
+                id: 'p-' + Date.now(),
+                studentId: user.id,
+                title: document.getElementById('paperTitle').value,
+                abstract: document.getElementById('paperAbstract').value,
+                tags: paperTags.length > 0 ? paperTags : ['General'],
+                published: true,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            const papers = DB.get('papers');
+            papers.unshift(paper);
+            DB.set('papers', papers);
+
+            showToast('Paper published successfully! 🎉', 'success');
+            closePublishModal();
+            renderPapers();
+        }
+
+        renderPapers();
+    </script>
+</body>
+
+</html>
