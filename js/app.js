@@ -99,12 +99,18 @@ function seedDemoData() {
   ];
   DB.set('hallTickets', hallTickets);
 
-  // Papers
-  const papers = [
-    { id: 'p1', studentId: '1', title: 'Face Recognition Attendance System using LBPH', abstract: 'A lightweight face recognition system built with OpenCV for automatic attendance marking in classrooms.', tags: ['AI', 'OpenCV', 'Python'], published: true, date: '2026-01-15' },
-    { id: 'p2', studentId: '2', title: 'Depression Detection through Facial Expression Analysis', abstract: 'Using deep learning to analyze facial micro-expressions and detect early signs of depression in students.', tags: ['Deep Learning', 'Health'], published: true, date: '2026-02-01' },
+
+  // Papers are now served from the backend API (SQLite database)
+
+  // Announcements from management
+  const announcements = [
+    { id: 'ann1', title: 'End Semester Exams Schedule Released', message: 'The end semester examination schedule for April 2026 has been published. Students are advised to download their hall tickets and verify their details. Any discrepancies should be reported to the examination cell before March 15.', priority: 'urgent', author: 'Examination Cell', date: '2026-02-22', icon: '🚨' },
+    { id: 'ann2', title: 'Project Submission Deadline Extended', message: 'The final year project submission deadline has been extended to March 30, 2026. Students must submit both the project report and working demo. Late submissions will not be accepted.', priority: 'important', author: 'HOD - Computer Science', date: '2026-02-20', icon: '📋' },
+    { id: 'ann3', title: 'Annual Tech Fest - InnoVerse 2026', message: 'Registrations are open for InnoVerse 2026, our annual technical festival. Events include hackathon, paper presentation, coding contest, and robotics challenge. Register through the college portal by March 5.', priority: 'info', author: 'Student Affairs', date: '2026-02-18', icon: '🎉' },
+    { id: 'ann4', title: 'Library Hours Extended During Exams', message: 'The central library will remain open from 8 AM to 10 PM during the examination period (April 10 - April 30). Digital library resources are available 24/7 with your student login.', priority: 'info', author: 'Central Library', date: '2026-02-15', icon: '📚' },
+    { id: 'ann5', title: 'Placement Drive - TCS & Infosys', message: 'TCS and Infosys will be conducting on-campus placement drives on March 10-12. Eligible students (CGPA ≥ 7.0) must register with the placement cell by March 3. Carry your updated resume and ID card.', priority: 'important', author: 'Placement Cell', date: '2026-02-14', icon: '💼' },
   ];
-  DB.set('papers', papers);
+  DB.set('announcements', announcements);
 
   // Set default user
   setCurrentUser(students[0]);
@@ -113,6 +119,7 @@ function seedDemoData() {
 // --- Navbar HTML ---
 function renderNavbar(activePage) {
   const user = getCurrentUser();
+  const isAdmin = DB.getOne('adminUser');
   const links = [
     { href: 'index.html', label: 'Home', id: 'home' },
     { href: 'dashboard.html', label: 'Dashboard', id: 'dashboard' },
@@ -120,6 +127,9 @@ function renderNavbar(activePage) {
     { href: 'papers.html', label: 'Papers', id: 'papers' },
     { href: 'mood-check.html', label: 'Mood Check', id: 'mood-check' },
   ];
+  if (isAdmin) {
+    links.push({ href: 'admin.html', label: '⚙ Admin', id: 'admin' });
+  }
 
   return `
     <nav class="navbar" id="navbar">
@@ -131,9 +141,9 @@ function renderNavbar(activePage) {
         <ul class="nav-links" id="navLinks">
           ${links.map(l => `<li><a href="${l.href}" class="${activePage === l.id ? 'active' : ''}">${l.label}</a></li>`).join('')}
           ${user
-            ? `<li><a href="#" onclick="logout()" class="nav-cta">Logout</a></li>`
-            : `<li><a href="login.html" class="nav-cta">Login</a></li>`
-          }
+      ? `<li><a href="#" onclick="logout()" class="nav-cta">Logout</a></li>`
+      : `<li><a href="login.html" class="nav-cta">Login</a></li>`
+    }
         </ul>
         <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
       </div>

@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel — EduFace</title>
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        .admin-page {
+            padding: 6rem 0 3rem;
+        }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .admin-header h1 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .admin-header .admin-badge {
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.8rem;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Tab Navigation */
+        .admin-tabs {
+            display: flex;
+            gap: 0.3rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.3rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        .admin-tabs button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.7rem 1.3rem;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .admin-tabs button:hover {
+            color: var(--text-primary);
+            background: rgba(139, 92, 246, 0.08);
+        }
+
+        .admin-tabs button.active {
+            background: var(--gradient-primary);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Overview Stats */
+        .overview-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .ov-stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .ov-stat:hover {
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+            transform: translateY(-3px);
+        }
+
+        .ov-stat .ov-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ov-stat .ov-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .ov-stat .ov-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.2rem;
+        }
+
+        /* Announcement Form */
+        .ann-form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .ann-form-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .priority-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .priority-selector label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .priority-selector label:hover {
+            border-color: var(--border-glow);
+        }
+
+        .priority-selector input[type="radio"] {
+            display: none;
+        }
+
+        .priority-selector input:checked+label,
+        .priority-selector label.selected {
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Existing Announcements List */
+        .manage-ann-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .manage-ann-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            transition: var(--transition);
+        }
+
+        .manage-ann-item:hover {
+            border-color: var(--border-glow);
+        }
+
+        .manage-ann-item .ann-info {
+            flex: 1;
+        }
+
+        .manage-ann-item .ann-info h4 {
+            font-size: 0.92rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .manage-ann-item .ann-info p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .manage-ann-item .ann-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            display: grid;
+            place-items: center;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .btn-icon:hover {
+            border-color: var(--accent-rose);
+            color: var(--accent-rose);
+            background: rgba(244, 63, 94, 0.1);
+        }
+
+        /* Students Table */
+        .students-table-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .students-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .students-table th {
+            background: rgba(139, 92, 246, 0.08);
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .students-table td {
+            padding: 1rem 1.2rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.88rem;
+        }
+
+        .students-table tr:hover td {
+            background: rgba(139, 92, 246, 0.03);
+        }
+
+        .student-name {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .student-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: grid;
+            place-items: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Attendance Overview */
+        .att-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.2rem;
+        }
+
+        .att-subject-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+        }
+
+        .att-subject-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .att-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 50px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .att-bar-fill {
+            height: 100%;
+            border-radius: 50px;
+            transition: width 1s ease;
+        }
+
+        .att-bar-fill.high {
+            background: var(--accent-green);
+        }
+
+        .att-bar-fill.medium {
+            background: var(--accent-amber);
+        }
+
+        .att-bar-fill.low {
+            background: var(--accent-rose);
+        }
+
+        .att-stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 768px) {
+            .overview-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-tabs {
+                gap: 0;
+            }
+
+            .students-table {
+                font-size: 0.8rem;
+            }
+
+            .students-table th,
+            .students-table td {
+                padding: 0.7rem;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .overview-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Admin Login Overlay */
+        .admin-login-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-login-overlay.hidden {
+            display: none;
+        }
+
+        .admin-login-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 3rem;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            position: relative;
+            animation: modalIn 0.3s ease;
+        }
+
+        .admin-login-box .lock-icon {
+            width: 70px;
+            height: 70px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 2rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .admin-login-box h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .admin-login-box .subtitle {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-bottom: 2rem;
+        }
+
+        .admin-login-box .login-error {
+            color: var(--accent-rose);
+            font-size: 0.85rem;
+            margin-top: 0.8rem;
+            display: none;
+        }
+
+        .admin-login-box .login-error.show {
+            display: block;
+        }
+
+        .admin-login-box .back-link {
+            display: inline-block;
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+
+        .admin-login-box .back-link:hover {
+            color: var(--accent-purple-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav"></div>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <!-- Admin Login Overlay -->
+    <div class="admin-login-overlay" id="adminLoginOverlay">
+        <div class="admin-login-box">
+            <div class="lock-icon">🔐</div>
+            <h2>Admin Access</h2>
+            <p class="subtitle">Enter admin credentials to continue</p>
+            <form onsubmit="adminLogin(event)">
+                <div class="form-group" style="text-align:left;">
+                    <label>Username</label>
+                    <input type="text" class="form-input" id="adminUsername" placeholder="Enter username" required
+                        autocomplete="off">
+                </div>
+                <div class="form-group" style="text-align:left;">
+                    <label>Password</label>
+                    <input type="password" class="form-input" id="adminPassword" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">🔓 Login as
+                    Admin</button>
+                <p class="login-error" id="loginError">❌ Invalid username or password</p>
+            </form>
+            <a href="index.html" class="back-link">← Back to Home</a>
+        </div>
+    </div>
+
+    <div class="page-content">
+        <div class="container admin-page">
+            <!-- Header -->
+            <div class="admin-header">
+                <h1>⚙️ Admin Panel <span class="admin-badge">Admin</span></h1>
+                <div style="display:flex; gap:0.6rem;">
+                    <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">← Dashboard</button>
+                    <button class="btn btn-danger" onclick="adminLogout()"
+                        style="padding:0.6rem 1.2rem; font-size:0.85rem;">🚪 Logout Admin</button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="admin-tabs" id="adminTabs">
+                <button class="active" onclick="switchTab('overview')">📊 Overview</button>
+                <button onclick="switchTab('announcements')">📢 Announcements</button>
+                <button onclick="switchTab('students')">👥 Students</button>
+                <button onclick="switchTab('attendance')">📋 Attendance</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div class="tab-panel active" id="tab-overview">
+                <div class="overview-stats" id="overviewStats"></div>
+
+                <div class="ann-form-card">
+                    <h3>📌 Recent Activity</h3>
+                    <div id="recentActivity"></div>
+                </div>
+            </div>
+
+            <!-- Announcements Tab -->
+            <div class="tab-panel" id="tab-announcements">
+                <!-- Post New -->
+                <div class="ann-form-card">
+                    <h3>✏️ Post New Announcement</h3>
+                    <form onsubmit="postAnnouncement(event)">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" class="form-input" id="annTitle"
+                                placeholder="e.g. Exam schedule released" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Author / Department</label>
+                                <input type="text" class="form-input" id="annAuthor" placeholder="e.g. Examination Cell"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label>Priority</label>
+                                <select class="form-input" id="annPriority">
+                                    <option value="info">ℹ️ Info</option>
+                                    <option value="important">⚠️ Important</option>
+                                    <option value="urgent">🚨 Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea class="form-input" id="annMessage"
+                                placeholder="Write the full announcement message..." required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Icon (emoji)</label>
+                            <input type="text" class="form-input" id="annIcon" placeholder="📢" value="📢"
+                                style="width:80px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary">📤 Post Announcement</button>
+                    </form>
+                </div>
+
+                <!-- Existing Announcements -->
+                <h3 style="margin-bottom:1rem; color:var(--text-secondary);">📋 Manage Existing Announcements</h3>
+                <div class="manage-ann-list" id="manageAnnList"></div>
+            </div>
+
+            <!-- Students Tab -->
+            <div class="tab-panel" id="tab-students">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; gap:0.8rem;">
+                    <h3 style="color:var(--text-secondary);">👥 Registered Students</h3>
+                    <span id="studentCount" class="badge badge-purple"></span>
+                </div>
+                <div class="students-table-wrap">
+                    <table class="students-table" id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll No</th>
+                                <th>Department</th>
+                                <th>Year</th>
+                                <th>Email</th>
+                                <th>Attendance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Attendance Tab -->
+            <div class="tab-panel" id="tab-attendance">
+                <h3 style="margin-bottom:1.2rem; color:var(--text-secondary);">📊 Subject-wise Attendance Overview</h3>
+                <div class="att-cards" id="attCards"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // ===== Admin Credentials (demo) =====
+        const ADMIN_CREDS = { username: 'admin', password: 'admin123' };
+
+        // Check if already logged in as admin
+        const adminUser = DB.getOne('adminUser');
+        if (adminUser) {
+            document.getElementById('adminLoginOverlay').classList.add('hidden');
+        }
+
+        function adminLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('adminUsername').value.trim();
+            const password = document.getElementById('adminPassword').value;
+
+            if (username === ADMIN_CREDS.username && password === ADMIN_CREDS.password) {
+                DB.setOne('adminUser', { name: 'Admin', role: 'admin', loggedInAt: new Date().toISOString() });
+                document.getElementById('adminLoginOverlay').classList.add('hidden');
+                document.getElementById('nav').innerHTML = renderNavbar('admin');
+                showToast('Welcome, Admin! 🎉', 'success');
+            } else {
+                document.getElementById('loginError').classList.add('show');
+                setTimeout(() => document.getElementById('loginError').classList.remove('show'), 3000);
+            }
+        }
+
+        function adminLogout() {
+            localStorage.removeItem('adminUser');
+            showToast('Admin logged out', 'info');
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('nav').innerHTML = renderNavbar('admin');
+        document.getElementById('footer').innerHTML = renderFooter();
+
+        const students = DB.get('students');
+        const attendance = DB.get('attendance');
+        const announcements = DB.get('announcements');
+        const papers = DB.get('papers');
+
+        // ===== Tab Switching =====
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.admin-tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            // Find and activate the clicked button
+            const buttons = document.querySelectorAll('.admin-tabs button');
+            const tabMap = ['overview', 'announcements', 'students', 'attendance'];
+            const idx = tabMap.indexOf(tabName);
+            if (idx >= 0) buttons[idx].classList.add('active');
+        }
+
+        // ===== Overview =====
+        const totalStudents = students.length;
+        const totalAttendance = attendance.length;
+        const totalAnns = announcements.length;
+        const totalPapers = papers.length;
+
+        document.getElementById('overviewStats').innerHTML = `
+            <div class="ov-stat">
+                <div class="ov-icon">👥</div>
+                <div class="ov-value">${totalStudents}</div>
+                <div class="ov-label">Total Students</div>
+            </div>
+            <div class="ov-stat">
+                <div class="ov-icon">📊</div>
+                <div class="ov-value">${totalAttendance}</div>
+                <div class="ov-label">Attendance Records</div>
+            </div>
+            <div class="ov-stat">
+                <div class="ov-icon">📢</div>
+                <div class="ov-value">${totalAnns}</div>
+                <div class="ov-label">Announcements</div>
+            </div>
+            <div class="ov-stat">
+                <div class="ov-icon">📄</div>
+                <div class="ov-value">${totalPapers}</div>
+                <div class="ov-label">Papers Published</div>
+            </div>
+        `;
+
+        // Recent activity
+        const recentActs = [];
+        announcements.slice(0, 3).forEach(a => recentActs.push({ text: `Announcement: ${a.title}`, date: a.date, icon: '📢' }));
+        papers.slice(0, 2).forEach(p => {
+            const author = students.find(s => s.id === p.studentId);
+            recentActs.push({ text: `Paper published by ${author ? author.name : 'Unknown'}: ${p.title}`, date: p.date, icon: '📄' });
+        });
+        recentActs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        document.getElementById('recentActivity').innerHTML = recentActs.length > 0
+            ? recentActs.map(a => `
+                <div class="recent-item">
+                    <div class="ri-left">
+                        <div class="ri-icon" style="background:rgba(139,92,246,0.12)">${a.icon}</div>
+                        <div class="ri-text">
+                            <h4>${a.text}</h4>
+                            <p>${a.date}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('')
+            : '<p style="color:var(--text-muted)">No recent activity</p>';
+
+        // ===== Announcements Management =====
+        function renderAnnManage() {
+            const anns = DB.get('announcements');
+            const list = document.getElementById('manageAnnList');
+            if (anns.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:2rem;">No announcements yet. Post one above!</p>';
+                return;
+            }
+            list.innerHTML = anns.map(a => `
+                <div class="manage-ann-item">
+                    <div class="ann-info">
+                        <h4>${a.icon} ${a.title}</h4>
+                        <p>${a.author} • ${a.date} • <span class="badge badge-${a.priority === 'urgent' ? 'rose' : a.priority === 'important' ? 'amber' : 'blue'}" style="font-size:0.65rem;">${a.priority}</span></p>
+                    </div>
+                    <div class="ann-actions">
+                        <button class="btn-icon" title="Delete" onclick="deleteAnnouncement('${a.id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function postAnnouncement(e) {
+            e.preventDefault();
+            const icons = { info: 'ℹ️', important: '⚠️', urgent: '🚨' };
+            const priority = document.getElementById('annPriority').value;
+            const customIcon = document.getElementById('annIcon').value.trim();
+
+            const ann = {
+                id: 'ann-' + Date.now(),
+                title: document.getElementById('annTitle').value,
+                message: document.getElementById('annMessage').value,
+                priority: priority,
+                author: document.getElementById('annAuthor').value,
+                date: new Date().toISOString().split('T')[0],
+                icon: customIcon || icons[priority] || '📢'
+            };
+
+            const anns = DB.get('announcements');
+            anns.unshift(ann);
+            DB.set('announcements', anns);
+
+            showToast('Announcement posted successfully! 📢', 'success');
+            e.target.reset();
+            document.getElementById('annIcon').value = '📢';
+            renderAnnManage();
+        }
+
+        function deleteAnnouncement(id) {
+            if (!confirm('Delete this announcement?')) return;
+            let anns = DB.get('announcements');
+            anns = anns.filter(a => a.id !== id);
+            DB.set('announcements', anns);
+            showToast('Announcement deleted', 'info');
+            renderAnnManage();
+        }
+
+        renderAnnManage();
+
+        // ===== Students Table =====
+        document.getElementById('studentCount').textContent = `${totalStudents} students`;
+
+        const subjects = ['Machine Learning', 'Cloud Computing', 'Cyber Security', 'Software Eng.'];
+
+        document.getElementById('studentsBody').innerHTML = students.map(s => {
+            const sAtt = attendance.filter(a => a.studentId === s.id);
+            const sPresent = sAtt.filter(a => a.status === 'present' || a.status === 'late').length;
+            const sPct = sAtt.length > 0 ? ((sPresent / sAtt.length) * 100).toFixed(1) : '0.0';
+            const pctClass = sPct >= 75 ? 'badge-green' : sPct >= 60 ? 'badge-amber' : 'badge-rose';
+
+            return `
+                <tr>
+                    <td>
+                        <div class="student-name">
+                            <div class="student-avatar">${s.name.charAt(0)}</div>
+                            <span>${s.name}</span>
+                        </div>
+                    </td>
+                    <td>${s.rollNo || '-'}</td>
+                    <td>${s.department || '-'}</td>
+                    <td>${s.year || '-'}</td>
+                    <td>${s.email || '-'}</td>
+                    <td><span class="badge ${pctClass}">${sPct}%</span></td>
+                </tr>
+            `;
+        }).join('');
+
+        // ===== Attendance Overview =====
+        document.getElementById('attCards').innerHTML = subjects.map(sub => {
+            const subAtt = attendance.filter(a => a.subject === sub);
+            const present = subAtt.filter(a => a.status === 'present' || a.status === 'late').length;
+            const total = subAtt.length;
+            const pct = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+            const barClass = pct >= 75 ? 'high' : pct >= 60 ? 'medium' : 'low';
+
+            return `
+                <div class="att-subject-card">
+                    <h4>📚 ${sub}</h4>
+                    <div class="att-bar">
+                        <div class="att-bar-fill ${barClass}" style="width:${pct}%"></div>
+                    </div>
+                    <div class="att-stat-row">
+                        <span>${present} / ${total} classes</span>
+                        <span style="font-weight:600; color: var(--text-primary)">${pct}%</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    </script>
+</body>
+
+</html>

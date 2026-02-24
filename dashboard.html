@@ -124,6 +124,122 @@
             flex-wrap: wrap;
         }
 
+        /* Announcements */
+        .announcements-section {
+            margin-bottom: 2rem;
+        }
+
+        .announcements-section h3 {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ann-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .ann-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.2rem 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .ann-card:hover {
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+            transform: translateY(-2px);
+        }
+
+        .ann-card.priority-urgent {
+            border-left-color: var(--accent-rose);
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.06), var(--bg-card));
+        }
+
+        .ann-card.priority-important {
+            border-left-color: var(--accent-amber);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.06), var(--bg-card));
+        }
+
+        .ann-card.priority-info {
+            border-left-color: var(--accent-blue);
+        }
+
+        .ann-card .ann-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .ann-card .ann-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ann-card .ann-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .ann-card .ann-body {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            display: none;
+            margin-top: 0.8rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .ann-card.expanded .ann-body {
+            display: block;
+        }
+
+        .ann-card .ann-from {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .ann-toggle {
+            text-align: center;
+            margin-top: 0.8rem;
+        }
+
+        .ann-toggle button {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.4rem 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            transition: var(--transition);
+        }
+
+        .ann-toggle button:hover {
+            border-color: var(--accent-purple);
+            color: var(--text-primary);
+        }
+
         @media (max-width: 900px) {
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -167,6 +283,13 @@
 
             <!-- Stats -->
             <div class="stats-grid" id="statsGrid"></div>
+
+            <!-- Announcements -->
+            <div class="announcements-section">
+                <h3>📢 Announcements from Management</h3>
+                <div class="ann-list" id="annList"></div>
+                <div class="ann-toggle" id="annToggle"></div>
+            </div>
 
             <!-- Charts -->
             <div class="charts-grid">
@@ -371,6 +494,47 @@
         </div>
       `).join('')
             : '<p style="color:var(--text-muted)">No papers published yet. <a href="papers.html" style="color:var(--accent-purple-light)">Publish one →</a></p>';
+
+        // ===== Announcements =====
+        const announcements = DB.get('announcements');
+        let showAllAnn = false;
+
+        function timeAgo(dateStr) {
+            const diff = Math.floor((new Date() - new Date(dateStr)) / 86400000);
+            if (diff === 0) return 'Today';
+            if (diff === 1) return 'Yesterday';
+            if (diff < 7) return diff + ' days ago';
+            if (diff < 30) return Math.floor(diff / 7) + 'w ago';
+            return dateStr;
+        }
+
+        function renderAnnouncements() {
+            const list = document.getElementById('annList');
+            const visible = showAllAnn ? announcements : announcements.slice(0, 3);
+
+            list.innerHTML = visible.map(a => `
+                <div class="ann-card priority-${a.priority}" onclick="this.classList.toggle('expanded')">
+                    <div class="ann-header">
+                        <div class="ann-title">${a.icon} ${a.title}</div>
+                        <div class="ann-meta">
+                            <span class="badge badge-${a.priority === 'urgent' ? 'rose' : a.priority === 'important' ? 'amber' : 'blue'}">${a.priority}</span>
+                            <span>${timeAgo(a.date)}</span>
+                        </div>
+                    </div>
+                    <div class="ann-from">From: ${a.author}</div>
+                    <div class="ann-body">${a.message}</div>
+                </div>
+            `).join('');
+
+            const toggle = document.getElementById('annToggle');
+            if (announcements.length > 3) {
+                toggle.innerHTML = `<button onclick="showAllAnn=!showAllAnn; renderAnnouncements();">${showAllAnn ? 'Show Less ↑' : `View All ${announcements.length} Announcements ↓`}</button>`;
+            } else {
+                toggle.innerHTML = '';
+            }
+        }
+
+        renderAnnouncements();
     </script>
 </body>
 

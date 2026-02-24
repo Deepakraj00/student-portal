@@ -7,6 +7,10 @@ __pycache__/
 # Face data (uploaded images — don't commit to public repo)
 backend/face_data/
 
+# Database & uploaded PDFs
+backend/eduface.db
+backend/papers_pdfs/
+
 # IDE
 .vscode/
 .idea/

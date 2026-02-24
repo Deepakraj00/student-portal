@@ -8,23 +8,90 @@ import io
 import json
 import base64
 import uuid
+import sqlite3
 from datetime import datetime
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 import numpy as np
 
-app = Flask(__name__)
+# Point Flask to serve frontend files from parent directory
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..')
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 CORS(app)
 
 # ===== Configuration =====
 FACE_DATA_DIR = os.path.join(os.path.dirname(__file__), 'face_data')
 os.makedirs(FACE_DATA_DIR, exist_ok=True)
+PAPERS_PDF_DIR = os.path.join(os.path.dirname(__file__), 'papers_pdfs')
+os.makedirs(PAPERS_PDF_DIR, exist_ok=True)
+DB_PATH = os.path.join(os.path.dirname(__file__), 'eduface.db')
 
 # In-memory storage for demo (replace with Supabase in production)
 students_db = {}
 attendance_db = []
+
+
+# ===== SQLite Database =====
+def get_db():
+    """Get a database connection (one per request)."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    """Create tables and seed default papers if empty."""
+    conn = get_db()
+    conn.execute('''CREATE TABLE IF NOT EXISTS papers (
+        id TEXT PRIMARY KEY,
+        studentId TEXT,
+        title TEXT NOT NULL,
+        abstract TEXT,
+        tags TEXT,
+        published INTEGER DEFAULT 1,
+        date TEXT,
+        pdfName TEXT
+    )''')
+    conn.commit()
+
+    # Migration: add pdfName column if missing (for existing databases)
+    try:
+        conn.execute('ALTER TABLE papers ADD COLUMN pdfName TEXT')
+        conn.commit()
+    except Exception:
+        pass  # column already exists
+
+    # Seed default papers if table is empty
+    count = conn.execute('SELECT COUNT(*) FROM papers').fetchone()[0]
+    if count == 0:
+        seed_papers = [
+            ('p1', '1', 'Face Recognition Attendance System using LBPH',
+             'A lightweight face recognition system built with OpenCV for automatic attendance marking in classrooms.',
+             'AI,OpenCV,Python', 1, '2026-01-15'),
+            ('p2', '2', 'Depression Detection through Facial Expression Analysis',
+             'Using deep learning to analyze facial micro-expressions and detect early signs of depression in students.',
+             'Deep Learning,Health', 1, '2026-02-01'),
+            ('p3', '3', 'Comparative Analysis of Facial Recognition Pipelines for Scalable Attendance Systems',
+             'A systematic comparison of facial recognition pipelines including ArcFace, SFace, GhostFaceNet, and Dlib for attendance systems. Evaluated using DeepFace and face_recognition frameworks on a dataset of approximately 13,000 images. Dlib demonstrated the best overall performance, outperforming deeper CNN-based embeddings in both speed and accuracy. The study highlights trade-offs between accuracy, discriminability, and real-time efficiency for scalable deployment.',
+             'Face Recognition,Deep Learning,Attendance', 1, '2026-01-20'),
+            ('p4', '1', 'AI-Based Detection of Subthreshold Depression through Facial Micro-Expression Analysis in University Students',
+             'This study investigates subtle facial cues to detect subthreshold depression in university students using AI tools like OpenFace 2.0. The research analyzed facial muscle movements from short self-introduction videos and identified specific micro-expressions — such as slight brow lifts, eye widening, and mouth stretches — that were more common in students with mild depressive symptoms. These movements were strongly linked to depression scores, even though they were often too subtle for human observers to notice. The approach is proposed as a non-invasive tool for early detection in educational settings.',
+             'AI,Mental Health,Micro-Expressions', 1, '2025-08-15'),
+            ('p5', '2', 'Mental Health Assessment Model for College Students Integrating Facial Expression Recognition with Deep Learning',
+             'A mental health assessment model for college students that integrates facial expression recognition with deep learning technology. The model combines dynamic and static facial expression information to enhance the accuracy and efficiency of psychological state recognition. The fusion model demonstrated significant advantages in accuracy, training stability, and generalization ability for recognizing abnormal mental states, and is proposed as a supplement to university mental health early-warning systems.',
+             'Deep Learning,Mental Health,Education', 1, '2025-11-10'),
+        ]
+        conn.executemany(
+            'INSERT INTO papers (id, studentId, title, abstract, tags, published, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            seed_papers
+        )
+        conn.commit()
+    conn.close()
+
+
+init_db()
 
 
 # ===== Helper Functions =====
@@ -269,6 +336,152 @@ def analyze_mood():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ===== Papers API (SQLite) =====
+@app.route('/api/papers', methods=['GET'])
+def list_papers():
+    """List all papers, with optional search."""
+    try:
+        search = request.args.get('search', '').strip().lower()
+        conn = get_db()
+        rows = conn.execute('SELECT * FROM papers ORDER BY date DESC').fetchall()
+        conn.close()
+
+        papers = []
+        for r in rows:
+            paper = {
+                'id': r['id'],
+                'studentId': r['studentId'],
+                'title': r['title'],
+                'abstract': r['abstract'],
+                'tags': r['tags'].split(',') if r['tags'] else [],
+                'published': bool(r['published']),
+                'date': r['date'],
+                'pdfName': r['pdfName']
+            }
+            if search:
+                haystack = (paper['title'] + ' ' + paper['abstract'] + ' ' + ' '.join(paper['tags'])).lower()
+                if search not in haystack:
+                    continue
+            papers.append(paper)
+
+        return jsonify(papers)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/papers', methods=['POST'])
+def create_paper():
+    """Publish a new paper (supports multipart form with optional PDF)."""
+    try:
+        paper_id = 'p-' + str(uuid.uuid4())[:8]
+
+        # Support both JSON and multipart form data
+        if request.content_type and 'multipart' in request.content_type:
+            title = request.form.get('title', '').strip()
+            abstract = request.form.get('abstract', '').strip()
+            tags_raw = request.form.get('tags', '')
+            tags = tags_raw if tags_raw else ''
+            student_id = request.form.get('studentId', '')
+            date = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
+        else:
+            data = request.json or {}
+            title = data.get('title', '').strip()
+            abstract = data.get('abstract', '').strip()
+            tags_list = data.get('tags', [])
+            tags = ','.join(tags_list) if isinstance(tags_list, list) else tags_list
+            student_id = data.get('studentId', '')
+            date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
+
+        if not title:
+            return jsonify({'error': 'Title is required'}), 400
+
+        # Handle PDF upload
+        pdf_name = None
+        pdf_file = request.files.get('pdf') if request.content_type and 'multipart' in request.content_type else None
+        if pdf_file and pdf_file.filename:
+            # Save with paper_id prefix to avoid name collisions
+            safe_name = paper_id + '_' + pdf_file.filename
+            pdf_file.save(os.path.join(PAPERS_PDF_DIR, safe_name))
+            pdf_name = safe_name
+
+        conn = get_db()
+        conn.execute(
+            'INSERT INTO papers (id, studentId, title, abstract, tags, published, date, pdfName) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+            (paper_id, student_id, title, abstract, tags, date, pdf_name)
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'id': paper_id,
+            'message': 'Paper published successfully'
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/papers/pdf/<paper_id>', methods=['GET'])
+def serve_paper_pdf(paper_id):
+    """Serve a paper's PDF file."""
+    try:
+        conn = get_db()
+        row = conn.execute('SELECT pdfName FROM papers WHERE id = ?', (paper_id,)).fetchone()
+        conn.close()
+
+        if not row or not row['pdfName']:
+            return jsonify({'error': 'No PDF found for this paper'}), 404
+
+        return send_from_directory(PAPERS_PDF_DIR, row['pdfName'], as_attachment=False)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/papers/<paper_id>', methods=['DELETE'])
+def delete_paper(paper_id):
+    """Delete a paper (admin only)."""
+    try:
+        is_admin = request.headers.get('X-Admin', '').lower() == 'true'
+        if not is_admin:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        conn = get_db()
+        # Get PDF name before deleting
+        row = conn.execute('SELECT pdfName FROM papers WHERE id = ?', (paper_id,)).fetchone()
+        result = conn.execute('DELETE FROM papers WHERE id = ?', (paper_id,))
+        conn.commit()
+        deleted = result.rowcount
+        conn.close()
+
+        if deleted == 0:
+            return jsonify({'error': 'Paper not found'}), 404
+
+        # Remove PDF file if exists
+        if row and row['pdfName']:
+            pdf_path = os.path.join(PAPERS_PDF_DIR, row['pdfName'])
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+
+        return jsonify({'success': True, 'message': 'Paper deleted'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== Serve Frontend Pages =====
+@app.route('/')
+def serve_index():
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+
+@app.route('/<path:filename>')
+def serve_frontend(filename):
+    """Serve frontend HTML, CSS, JS files."""
+    file_path = os.path.join(FRONTEND_DIR, filename)
+    if os.path.isfile(file_path):
+        return send_from_directory(FRONTEND_DIR, filename)
+    return send_from_directory(FRONTEND_DIR, 'index.html')
 
 
 # ===== Run Server =====
