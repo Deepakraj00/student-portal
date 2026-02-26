@@ -378,35 +378,66 @@
             if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
         }
 
-        function handleRegister(e) {
+        async function handleRegister(e) {
             e.preventDefault();
             if (capturedImages.length < 3) {
                 showToast('Please capture all 3 face angles first', 'error');
                 return;
             }
 
-            const newStudent = {
-                id: Date.now().toString(),
-                name: document.getElementById('regName').value,
-                email: document.getElementById('regEmail').value,
-                rollNo: document.getElementById('regRoll').value,
-                department: document.getElementById('regDept').value,
-                year: parseInt(document.getElementById('regYear').value),
-                faceData: capturedImages
-            };
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const rollNo = document.getElementById('regRoll').value.trim();
+            const department = document.getElementById('regDept').value;
+            const year = parseInt(document.getElementById('regYear').value);
+            const password = document.getElementById('regPass').value;
 
-            const students = DB.get('students');
-            // Check duplicate
-            if (students.find(s => s.email === newStudent.email || s.rollNo === newStudent.rollNo)) {
-                showToast('A student with this email or roll number already exists', 'error');
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
                 return;
             }
-            students.push(newStudent);
-            DB.set('students', students);
-            setCurrentUser(newStudent);
 
-            showToast(`Welcome, ${newStudent.name}! Registration successful!`, 'success');
-            setTimeout(() => window.location.href = 'dashboard.html', 1200);
+            // Disable button while registering
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, rollNo, department, year, password })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    showToast(result.error || 'Registration failed', 'error');
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'Complete Registration →';
+                    return;
+                }
+
+                // Store face data locally for demo face recognition
+                const user = result.user;
+                user.faceData = capturedImages;
+
+                // Also keep in localStorage students list for face recognition features
+                const students = DB.get('students');
+                if (!students.find(s => s.email === user.email)) {
+                    students.push(user);
+                    DB.set('students', students);
+                }
+
+                setCurrentUser(user);
+                showToast(result.message || `Welcome, ${user.name}!`, 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1200);
+
+            } catch (err) {
+                showToast('Cannot reach server. Please try again later.', 'error');
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Complete Registration →';
+            }
         }
     </script>
 </body>

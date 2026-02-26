@@ -8,6 +8,7 @@ import io
 import json
 import base64
 import uuid
+import hashlib
 import sqlite3
 from datetime import datetime
 
@@ -41,9 +42,44 @@ def get_db():
     return conn
 
 
+def hash_password(password):
+    """Hash a password using SHA-256."""
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+
 def init_db():
-    """Create tables and seed default papers if empty."""
+    """Create tables and seed default data if empty."""
     conn = get_db()
+
+    # ===== Users table =====
+    conn.execute('''CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        rollNo TEXT UNIQUE NOT NULL,
+        department TEXT,
+        year INTEGER,
+        password TEXT NOT NULL,
+        createdAt TEXT
+    )''')
+    conn.commit()
+
+    # Seed default users if table is empty
+    user_count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+    if user_count == 0:
+        default_password = hash_password('student123')
+        seed_users = [
+            ('1', 'Deepak Raj', 'deepak@student.edu', 'CS2022001', 'Computer Science', 4, default_password, '2026-01-01'),
+            ('2', 'Priya Sharma', 'priya@student.edu', 'CS2022002', 'Computer Science', 4, default_password, '2026-01-01'),
+            ('3', 'Arjun Kumar', 'arjun@student.edu', 'EC2022003', 'Electronics', 4, default_password, '2026-01-01'),
+        ]
+        conn.executemany(
+            'INSERT INTO users (id, name, email, rollNo, department, year, password, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            seed_users
+        )
+        conn.commit()
+
+    # ===== Papers table =====
     conn.execute('''CREATE TABLE IF NOT EXISTS papers (
         id TEXT PRIMARY KEY,
         studentId TEXT,
@@ -119,6 +155,100 @@ def health():
         'version': '1.0.0',
         'timestamp': datetime.now().isoformat()
     })
+
+
+# ===== Authentication API =====
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Authenticate a student with email/rollNo and password."""
+    try:
+        data = request.json or {}
+        identifier = data.get('identifier', '').strip()  # email or rollNo
+        password = data.get('password', '')
+
+        if not identifier or not password:
+            return jsonify({'error': 'Email/Roll Number and password are required'}), 400
+
+        conn = get_db()
+        user = conn.execute(
+            'SELECT * FROM users WHERE email = ? OR rollNo = ?',
+            (identifier, identifier)
+        ).fetchone()
+        conn.close()
+
+        if not user:
+            return jsonify({'error': 'No account found with that email or roll number'}), 401
+
+        if user['password'] != hash_password(password):
+            return jsonify({'error': 'Incorrect password'}), 401
+
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user['id'],
+                'name': user['name'],
+                'email': user['email'],
+                'rollNo': user['rollNo'],
+                'department': user['department'],
+                'year': user['year']
+            },
+            'message': f"Welcome back, {user['name']}!"
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new student account."""
+    try:
+        data = request.json or {}
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        roll_no = data.get('rollNo', '').strip()
+        department = data.get('department', '').strip()
+        year = data.get('year', 1)
+        password = data.get('password', '')
+
+        if not name or not email or not roll_no or not password:
+            return jsonify({'error': 'All fields are required'}), 400
+
+        if len(password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+        conn = get_db()
+
+        # Check for duplicates
+        existing = conn.execute(
+            'SELECT id FROM users WHERE email = ? OR rollNo = ?',
+            (email, roll_no)
+        ).fetchone()
+        if existing:
+            conn.close()
+            return jsonify({'error': 'A student with this email or roll number already exists'}), 409
+
+        user_id = str(uuid.uuid4())[:8]
+        conn.execute(
+            'INSERT INTO users (id, name, email, rollNo, department, year, password, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            (user_id, name, email, roll_no, department, year, hash_password(password), datetime.now().isoformat())
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user_id,
+                'name': name,
+                'email': email,
+                'rollNo': roll_no,
+                'department': department,
+                'year': year
+            },
+            'message': f'Welcome, {name}! Registration successful.'
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ===== Face Registration =====

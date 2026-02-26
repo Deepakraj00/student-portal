@@ -61,9 +61,9 @@ function seedDemoData() {
   if (DB.get('students').length > 0) return; // already seeded
 
   const students = [
-    { id: '1', name: 'Deepak Raj', email: 'deepak@student.edu', rollNo: 'CS2022001', department: 'Computer Science', year: 4, faceData: null },
-    { id: '2', name: 'Priya Sharma', email: 'priya@student.edu', rollNo: 'CS2022002', department: 'Computer Science', year: 4, faceData: null },
-    { id: '3', name: 'Arjun Kumar', email: 'arjun@student.edu', rollNo: 'EC2022003', department: 'Electronics', year: 4, faceData: null },
+    { id: '1', name: 'Deepak Raj', email: 'deepak@student.edu', rollNo: 'CS2022001', department: 'Computer Science', year: 4, faceData: null, password: 'student123' },
+    { id: '2', name: 'Priya Sharma', email: 'priya@student.edu', rollNo: 'CS2022002', department: 'Computer Science', year: 4, faceData: null, password: 'student123' },
+    { id: '3', name: 'Arjun Kumar', email: 'arjun@student.edu', rollNo: 'EC2022003', department: 'Electronics', year: 4, faceData: null, password: 'student123' },
   ];
   DB.set('students', students);
 
