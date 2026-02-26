@@ -112,8 +112,7 @@ function seedDemoData() {
   ];
   DB.set('announcements', announcements);
 
-  // Set default user
-  setCurrentUser(students[0]);
+  // Don't auto-login — users must login via login page
 }
 
 // --- Navbar HTML ---
