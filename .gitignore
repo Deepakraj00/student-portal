@@ -3,6 +3,9 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+venv/
+env/
+.venv/
 
 # Face data (uploaded images — don't commit to public repo)
 backend/face_data/
